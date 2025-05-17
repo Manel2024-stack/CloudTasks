@@ -1,0 +1,67 @@
+---
+- name: Déploiement complet de l'application CloudTasks sur EC2
+  hosts: cloudtasks
+  become: yes
+
+  vars:
+    project_dir: /home/ec2-user/CloudTasks
+
+  tasks:
+
+    - name: Supprimer l'ancien dossier du projet (s'il existe)
+      file:
+        path: "{{ project_dir }}"
+        state: absent
+
+    - name: Copier le projet CloudTasks (avec Ansible, Docker, App...)
+      copy:
+        src: ../CloudTasks/
+        dest: "{{ project_dir }}"
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
+
+    - name: Rebuild et relancer les conteneurs
+      shell: |
+        docker-compose down
+        docker-compose up -d --build
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: Installer les dépendances PHP avec Composer
+      shell: docker exec cloudtasks_php_1 composer install
+      args:
+        chdir: "{{ project_dir }}/app"
+
+    - name: Supprimer les anciens fichiers de migration
+      file:
+        path: "{{ project_dir }}/app/src/Migrations"
+        state: absent
+
+    - name: Recréer le dossier des migrations
+      file:
+        path: "{{ project_dir }}/app/src/Migrations"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
+
+    - name: Supprimer la base de données PostgreSQL
+      shell: docker exec cloudtasks_php_1 php bin/console doctrine:database:drop --force
+      args:
+        chdir: "{{ project_dir }}/app"
+
+    - name: Créer une nouvelle base PostgreSQL
+      shell: docker exec cloudtasks_php_1 php bin/console doctrine:database:create
+      args:
+        chdir: "{{ project_dir }}/app"
+
+    - name: Générer une nouvelle migration Doctrine
+      shell: docker exec cloudtasks_php_1 php bin/console doctrine:migrations:diff
+      args:
+        chdir: "{{ project_dir }}/app"
+
+    - name: Appliquer la migration Doctrine (PostgreSQL)
+      shell: docker exec cloudtasks_php_1 php bin/console doctrine:migrations:migrate --no-interaction
+      args:
+        chdir: "{{ project_dir }}/app"

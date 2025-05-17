@@ -1,0 +1,36 @@
+---
+- name: Installer Docker et Docker Compose sur EC2 AWS
+  hosts: cloudtasks
+  become: yes
+
+  tasks:
+    - name: Mettre à jour les paquets
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Activer le dépôt docker d'Amazon Linux 2
+      command: amazon-linux-extras enable docker
+
+    - name: Installer Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Démarrer et activer Docker
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Ajouter ec2-user au groupe docker
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Télécharger Docker Compose
+      get_url:
+          url: https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64
+          dest: /usr/local/bin/docker-compose
+          mode: '0755'
