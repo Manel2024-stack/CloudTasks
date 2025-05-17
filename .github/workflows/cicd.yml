@@ -43,6 +43,12 @@ jobs:
           cd app
           composer install --no-progress --no-interaction
 
+      - name: Drop and Create Database
+        run: |
+          cd app
+          php bin/console doctrine:database:drop --force || true
+          php bin/console doctrine:database:create
+
       - name: Run Doctrine migrations
         run: |
           cd app
