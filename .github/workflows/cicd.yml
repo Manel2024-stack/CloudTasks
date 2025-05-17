@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   symfony:
@@ -39,6 +39,14 @@ jobs:
           extensions: intl, pdo_pgsql
           coverage: none
 
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
       - name: Install Composer dependencies
         run: |
           cd app
@@ -60,6 +68,13 @@ jobs:
           cd app
           php bin/phpunit
 
+      - name: Define image tag
+        run: echo "IMAGE_TAG=cloudtasks-app:$(date +%Y%m%d%H%M%S)" >> $GITHUB_ENV
+
+      - name: Verify Dockerfile presence
+        run: |
+          test -f docker/php/Dockerfile || (echo "Dockerfile not found!" && exit 1)
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -68,9 +83,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f docker/php/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/cloudtasks-app .
-
+          docker build -f docker/php/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/$IMAGE_TAG .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/cloudtasks-app
+          docker push ${{ secrets.DOCKER_USERNAME }}/$IMAGE_TAG
