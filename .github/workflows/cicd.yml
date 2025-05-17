@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    workflow_dispatch:
 
 jobs:
   symfony:
@@ -58,7 +59,7 @@ jobs:
         run: |
           cd app
           php bin/phpunit
-          
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
