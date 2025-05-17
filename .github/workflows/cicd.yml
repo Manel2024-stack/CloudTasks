@@ -68,7 +68,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/cloudtasks-app ./app
+          docker build -f docker/php/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/cloudtasks-app .
+
 
       - name: Push Docker image
         run: |
